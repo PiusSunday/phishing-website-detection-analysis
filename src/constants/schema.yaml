@@ -1,0 +1,6 @@
+#features:
+#  - feature1: int
+#  - feature2: float
+#  - feature3: str
+#target:
+#  - is_phishing: int

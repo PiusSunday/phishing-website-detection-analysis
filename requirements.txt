@@ -1,0 +1,9 @@
+pandas
+numpy
+seaborn
+matplotlib
+scikit-learn
+Flask
+pymongo[srv]==3.12
+
+# -e .

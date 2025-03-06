@@ -1,0 +1,44 @@
+#[build-system]
+#requires = ["setuptools>=75.8.0", "wheel"]
+#build-backend = "setuptools.build_meta"
+#
+#[project]
+#name = "phishing-website-detection-analysis"  # Replace it with your project name
+#version = "0.0.1"                     # Add the version field
+#
+##[tool.setuptools.editable]
+##mode = "compat"
+
+[build-system]
+requires = ["setuptools>=75.8.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "phishing-website-detection-analysis"
+version = "0.0.1"
+authors = [
+    { name = "Sunnythesage", email = "Sundaypius2000@gmail.com" }
+]
+
+dependencies = [
+    "pandas",
+    "numpy",
+    "seaborn",
+    "matplotlib",
+    "scikit-learn",
+    "Flask",
+    "pymongo[srv]==3.12"
+]
+
+#[tool.setuptools.editable]
+#mode = "compat"
+
+# To install the project as a package in the current environment, run:
+# pip install .
+
+# If you need to build the package for distribution, run:
+# pip install build
+# python -m build
+
+# Then, to install the built package, run:
+# pip install dist/*.whl

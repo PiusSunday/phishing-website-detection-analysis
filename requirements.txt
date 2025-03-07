@@ -4,6 +4,9 @@ seaborn
 matplotlib
 scikit-learn
 Flask
+certifi
+pymongo
 pymongo[srv]==3.12
+python-dotenv
 
 # -e .

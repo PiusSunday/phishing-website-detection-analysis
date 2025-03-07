@@ -2,15 +2,15 @@ import os
 from pathlib import Path
 
 # Root directory of the project
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Data directory
-DATA_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+# DATA_ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Data paths
-RAW_DATA_DIR = os.path.join(DATA_ROOT_DIR, "data", "raw")
-PROCESSED_DATA_DIR = os.path.join(DATA_ROOT_DIR, "data", "processed")
-SCHEMA_FILE_PATH = os.path.join(DATA_ROOT_DIR, "src", "constants", "schema.yaml")
+RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
+PROCESSED_DATA_DIR = os.path.join(ROOT_DIR, "data", "processed")
+SCHEMA_FILE_PATH = os.path.join(ROOT_DIR, "src", "constants", "schema.yaml")
 
 # Database configuration
 DATABASE_NAME = "phishing_website_detection_analysis_db"

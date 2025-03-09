@@ -10,6 +10,7 @@ from ..constants import (
     MODEL_CONFIG_FILE,
     PROCESSED_DATA_DIR,
     RAW_DATA_DIR,
+    SCHEMA_FILE_PATH,
     TRANSFORMED_DATA_DIR,
     VALIDATED_DATA_DIR,
 )
@@ -43,11 +44,10 @@ class DataValidationConfig:
     Configuration for data validation.
     """
 
-    schema_file_path: str  # Path to the schema file (e.g., JSON or YAML)
-    report_file_path: str  # Path to save validation reports
-    validated_data_dir: str = os.path.join(
-        PROCESSED_DATA_DIR, "validated"
-    )  # Directory to store validated data
+    schema_file_path: str = (
+        SCHEMA_FILE_PATH  # Path to the schema file (e.g., JSON or YAML)
+    )
+    validated_data_dir: str = VALIDATED_DATA_DIR  # Directory to store validated data
     valid_train_file_path: str = os.path.join(
         VALIDATED_DATA_DIR, "train.csv"
     )  # Path to valid training data
@@ -60,6 +60,9 @@ class DataValidationConfig:
     invalid_test_file_path: str = os.path.join(
         VALIDATED_DATA_DIR, "invalid_test.csv"
     )  # Path to invalid testing data
+    drift_report_file_path: str = os.path.join(
+        VALIDATED_DATA_DIR, "drift_report.yaml"
+    )  # Path to drift report
 
 
 @dataclass

@@ -123,7 +123,7 @@ class DataIngestion:
                 f"Error splitting data into train/test sets: {e}", sys
             )
 
-    def initiate_data_ingestion(self) -> DataIngestionArtifact:
+    def  initiate_data_ingestion(self) -> DataIngestionArtifact:
         """
         Initiates the data ingestion process.
 

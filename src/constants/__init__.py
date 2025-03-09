@@ -19,6 +19,8 @@ TRANSFORMED_DATA_DIR = os.path.join(
     PROCESSED_DATA_DIR, "transformed"
 )  # Data from transformation stage
 
+REPORT_FILE_PATH = os.path.join(ROOT_DIR, "reports", "data_validation_report.yaml")
+
 # Schema and model configuration paths
 SCHEMA_FILE_PATH = os.path.join(ROOT_DIR, "src", "constants", "schema.yaml")
 MODEL_CONFIG_FILE = os.path.join(ROOT_DIR, "src", "constants", "model_config.yaml")

@@ -9,5 +9,9 @@ pymongo
 pymongo[srv]==3.12
 python-dotenv
 pyaml
+mlflow
+pyarrow
+wandb
+hydra-core
 
 # -e .

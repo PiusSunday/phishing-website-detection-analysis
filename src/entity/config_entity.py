@@ -1,5 +1,7 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+import numpy as np
 
 from ..constants import (
     ARTIFACTS_DIR,
@@ -8,11 +10,13 @@ from ..constants import (
     DATABASE_NAME,
     INGESTED_DATA_DIR,
     MODEL_CONFIG_FILE,
-    PROCESSED_DATA_DIR,
     RAW_DATA_DIR,
     SCHEMA_FILE_PATH,
+    TARGET_COLUMN,
     TRANSFORMED_DATA_DIR,
+    TRANSFORMED_DATA_OBJECTS_DIR,
     VALIDATED_DATA_DIR,
+    VALIDATED_DATA_OBJECTS_DIR,
 )
 
 
@@ -48,6 +52,9 @@ class DataValidationConfig:
         SCHEMA_FILE_PATH  # Path to the schema file (e.g., JSON or YAML)
     )
     validated_data_dir: str = VALIDATED_DATA_DIR  # Directory to store validated data
+    validated_object_dir: str = (
+        VALIDATED_DATA_OBJECTS_DIR  # Directory to store validation objects
+    )
     valid_train_file_path: str = os.path.join(
         VALIDATED_DATA_DIR, "train.csv"
     )  # Path to valid training data
@@ -61,7 +68,7 @@ class DataValidationConfig:
         VALIDATED_DATA_DIR, "invalid_test.csv"
     )  # Path to invalid testing data
     drift_report_file_path: str = os.path.join(
-        VALIDATED_DATA_DIR, "drift_report.yaml"
+        VALIDATED_DATA_OBJECTS_DIR, "drift_report.yaml"
     )  # Path to drift report
 
 
@@ -71,9 +78,20 @@ class DataTransformationConfig:
     Configuration for data transformation.
     """
 
-    transformed_data_dir: str = os.path.join(
-        PROCESSED_DATA_DIR, "transformed"
-    )  # Directory to store transformed data
+    target_column: str = TARGET_COLUMN  # Name of the target column
+    imputer_params: dict = field(
+        default_factory=lambda: {
+            "missing_values": np.nan,  # Replace NaN values
+            "n_neighbors": 3,  # Number of neighbors to use
+            "weights": "uniform",  # Weight function used in prediction
+        }
+    )
+    transformed_data_dir: str = (
+        TRANSFORMED_DATA_DIR  # Directory to store transformed data
+    )
+    transformed_object_dir: str = (
+        TRANSFORMED_DATA_OBJECTS_DIR  # Directory to store transformation objects
+    )
     transformed_train_file_path: str = os.path.join(
         TRANSFORMED_DATA_DIR, "train.npy"
     )  # Path to transformed training data
@@ -81,7 +99,7 @@ class DataTransformationConfig:
         TRANSFORMED_DATA_DIR, "test.npy"
     )  # Path to transformed testing data
     transformed_object_file_path: str = os.path.join(
-        TRANSFORMED_DATA_DIR, "preprocessing.pkl"
+        TRANSFORMED_DATA_OBJECTS_DIR, "preprocessor.pkl"
     )  # Path to the transformation object
 
 

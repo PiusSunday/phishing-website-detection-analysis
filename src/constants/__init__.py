@@ -4,6 +4,10 @@ from pathlib import Path
 # Root directory of the project
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
+# Logging configuration
+LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+LOG_FILE_PATH = os.path.join(LOGS_DIR, "phishing_website_detection_analysis.log")
+
 # Data directories
 RAW_DATA_DIR = os.path.join(ROOT_DIR, "data", "raw")
 PROCESSED_DATA_DIR = os.path.join(ROOT_DIR, "data", "processed")
@@ -19,7 +23,12 @@ TRANSFORMED_DATA_DIR = os.path.join(
     PROCESSED_DATA_DIR, "transformed"
 )  # Data from transformation stage
 
-REPORT_FILE_PATH = os.path.join(ROOT_DIR, "reports", "data_validation_report.yaml")
+VALIDATED_DATA_OBJECTS_DIR = os.path.join(VALIDATED_DATA_DIR, "objects")
+TRANSFORMED_DATA_OBJECTS_DIR = os.path.join(TRANSFORMED_DATA_DIR, "objects")
+
+DATA_VALIDATION_REPORT_FILE_PATH = os.path.join(
+    ROOT_DIR, "reports", "data_validation_report.yaml"
+)
 
 # Schema and model configuration paths
 SCHEMA_FILE_PATH = os.path.join(ROOT_DIR, "src", "constants", "schema.yaml")
@@ -32,9 +41,8 @@ COLLECTION_NAME = "phishing_data"
 # Model configuration
 BASE_ACCURACY = 0.85  # Minimum accuracy threshold for model acceptance
 
-# Logging configuration
-LOGS_DIR = os.path.join(ROOT_DIR, "logs")
-LOG_FILE_PATH = os.path.join(LOGS_DIR, "phishing_website_detection_analysis.log")
-
 # Artifacts directory
 ARTIFACTS_DIR = os.path.join(ROOT_DIR, "artifacts")
+
+# Target column name
+TARGET_COLUMN = "Result"  # Name of the target column in the dataset

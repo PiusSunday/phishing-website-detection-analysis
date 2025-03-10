@@ -1,18 +1,15 @@
 import os
+import re
 import sys
+import warnings
 
-from sklearn.ensemble import (
-    AdaBoostClassifier,
-    GradientBoostingClassifier,
-    RandomForestClassifier,
-)
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score, precision_score, recall_score
-from sklearn.model_selection import GridSearchCV
-from sklearn.tree import DecisionTreeClassifier
+import mlflow
+import wandb
+from mlflow.models import infer_signature
+from omegaconf import DictConfig
+from scipy.optimize import OptimizeWarning
 
 from ..entity.artifact_entity import (
-    ClassificationMetricArtifact,
     DataTransformationArtifact,
     ModelTrainerArtifact,
 )
@@ -20,6 +17,18 @@ from ..entity.config_entity import ModelTrainingConfig
 from ..utils.common import load_numpy_array_data, save_object
 from ..utils.exception import PhishingDetectionException
 from ..utils.logging import logger
+from ..utils.model_utils import (
+    evaluate_models,
+    get_base_models,
+    get_classification_score,
+    get_hyperparameter_grids,
+)
+
+# Suppress specific warnings
+warnings.filterwarnings("ignore", category=FutureWarning)  # Suppress FutureWarning
+warnings.filterwarnings(
+    "ignore", category=OptimizeWarning
+)  # Suppress optimization warnings
 
 
 class ModelTraining:
@@ -29,6 +38,7 @@ class ModelTraining:
 
     def __init__(
         self,
+        config: DictConfig,
         model_training_config: ModelTrainingConfig,
         data_transformation_artifact: DataTransformationArtifact,
     ):
@@ -40,70 +50,11 @@ class ModelTraining:
             data_transformation_artifact (DataTransformationArtifact): Artifact from the data transformation stage.
         """
         try:
+            self.config = config
             self.model_training_config = model_training_config
             self.data_transformation_artifact = data_transformation_artifact
         except Exception as e:
             raise PhishingDetectionException(str(e), sys)
-
-    def evaluate_models(self, X_train, y_train, X_test, y_test, models, params) -> dict:
-        """
-        Evaluates multiple models using GridSearchCV and returns the best model.
-
-        Args:
-            X_train (np.array): Training features.
-            y_train (np.array): Training labels.
-            X_test (np.array): Testing features.
-            y_test (np.array): Testing labels.
-            models (dict): Dictionary of models to evaluate.
-            params (dict): Dictionary of hyperparameters for each model.
-
-        Returns:
-            dict: Dictionary containing the best model and its score.
-        """
-        try:
-            report = {}
-
-            for model_name, model in models.items():
-                logger.info(f"Training {model_name}...")
-                gs = GridSearchCV(model, params[model_name], cv=3)
-                gs.fit(X_train, y_train)
-
-                # Set the best parameters and fit the model
-                model.set_params(**gs.best_params_)
-                model.fit(X_train, y_train)
-
-                # Evaluate the model
-                y_test_pred = model.predict(X_test)
-                test_model_score = f1_score(y_test, y_test_pred)
-
-                report[model_name] = test_model_score
-
-            return report
-        except Exception as e:
-            raise PhishingDetectionException(f"Error evaluating models: {e}", sys)
-
-    def get_classification_score(self, y_true, y_pred) -> ClassificationMetricArtifact:
-        """
-        Calculates classification metrics (F1 score, precision, recall).
-
-        Args:
-            y_true (np.array): True labels.
-            y_pred (np.array): Predicted labels.
-
-        Returns:
-            ClassificationMetricArtifact: Artifact containing classification metrics.
-        """
-        try:
-            f1 = f1_score(y_true, y_pred)
-            precision = precision_score(y_true, y_pred)
-            recall = recall_score(y_true, y_pred)
-            return ClassificationMetricArtifact(
-                f1_score=f1, precision_score=precision, recall_score=recall
-            )
-        except Exception as e:
-            raise PhishingDetectionException(
-                f"Error calculating classification metrics: {e}", sys
-            )
 
     def train_model(self, X_train, y_train, X_test, y_test) -> ModelTrainerArtifact:
         """
@@ -119,35 +70,10 @@ class ModelTraining:
             ModelTrainerArtifact: Artifact containing the trained model and evaluation metrics.
         """
         try:
-            models = {
-                "Random Forest": RandomForestClassifier(verbose=1),
-                "Decision Tree": DecisionTreeClassifier(),
-                "Gradient Boosting": GradientBoostingClassifier(verbose=1),
-                "Logistic Regression": LogisticRegression(verbose=1),
-                "AdaBoost": AdaBoostClassifier(),
-            }
+            models = get_base_models()
+            params = get_hyperparameter_grids()
 
-            params = {
-                "Decision Tree": {
-                    "criterion": ["gini", "entropy", "log_loss"],
-                },
-                "Random Forest": {
-                    "n_estimators": [8, 16, 32, 128, 256],
-                },
-                "Gradient Boosting": {
-                    "learning_rate": [0.1, 0.01, 0.05, 0.001],
-                    "subsample": [0.6, 0.7, 0.75, 0.85, 0.9],
-                    "n_estimators": [8, 16, 32, 64, 128, 256],
-                },
-                "Logistic Regression": {},
-                "AdaBoost": {
-                    "learning_rate": [0.1, 0.01, 0.001],
-                    "n_estimators": [8, 16, 32, 64, 128, 256],
-                },
-            }
-
-            # Evaluate models and select the best one
-            model_report = self.evaluate_models(
+            model_report = evaluate_models(
                 X_train, y_train, X_test, y_test, models, params
             )
             best_model_score = max(model_report.values())
@@ -156,21 +82,36 @@ class ModelTraining:
             ]
             best_model = models[best_model_name]
 
-            # Calculate classification metrics
             y_train_pred = best_model.predict(X_train)
-            train_metric_artifact = self.get_classification_score(y_train, y_train_pred)
+            train_metric_artifact = get_classification_score(y_train, y_train_pred)
 
             y_test_pred = best_model.predict(X_test)
-            test_metric_artifact = self.get_classification_score(y_test, y_test_pred)
+            test_metric_artifact = get_classification_score(y_test, y_test_pred)
 
-            # Save the trained model
             os.makedirs(
                 os.path.dirname(self.model_training_config.trained_model_file_path),
                 exist_ok=True,
             )
             save_object(self.model_training_config.trained_model_file_path, best_model)
 
-            # Return the training artifact
+            # Pass parameters to log_mlflow
+            self.log_mlflow(
+                best_model,
+                train_metric_artifact,
+                test_metric_artifact,
+                best_model_name,
+                X_train,
+            )
+
+            # Log to wandb
+            self.log_wandb(
+                best_model,
+                train_metric_artifact,
+                test_metric_artifact,
+                best_model_name,
+                best_model_score,
+            )
+
             return ModelTrainerArtifact(
                 trained_model_file_path=self.model_training_config.trained_model_file_path,
                 train_metric_artifact=train_metric_artifact,
@@ -178,6 +119,96 @@ class ModelTraining:
             )
         except Exception as e:
             raise PhishingDetectionException(f"Error training model: {e}", sys)
+
+    @staticmethod
+    def log_mlflow(
+        best_model,
+        train_metric_artifact,
+        test_metric_artifact,
+        best_model_name,
+        X_train,
+    ):
+        """Logs metrics, parameters, and model to MLFlow."""
+        experiment_name = "Phishing_Detection_Model_Training"
+        if not mlflow.get_experiment_by_name(experiment_name):
+            mlflow.create_experiment(experiment_name)
+        mlflow.set_experiment(experiment_name)
+
+        with mlflow.start_run():
+            # Log parameters
+            mlflow.log_params(best_model.get_params())
+
+            # Log metrics
+            mlflow.log_metric("train_f1", train_metric_artifact.f1_score)
+            mlflow.log_metric("train_precision", train_metric_artifact.precision_score)
+            mlflow.log_metric("train_recall", train_metric_artifact.recall_score)
+            mlflow.log_metric("test_f1", test_metric_artifact.f1_score)
+            mlflow.log_metric("test_precision", test_metric_artifact.precision_score)
+            mlflow.log_metric("test_recall", test_metric_artifact.recall_score)
+
+            # Log the best model name as a tag
+            mlflow.set_tag("best_model", best_model_name)
+
+            # Infer model signature and log input example
+            signature = infer_signature(X_train, best_model.predict(X_train))
+            input_example = X_train[:5]  # Log the first 5 rows as an input example
+
+            # Log the model with signature and input example
+            mlflow.sklearn.log_model(
+                sk_model=best_model,
+                artifact_path="best_model",
+                signature=signature,
+                input_example=input_example,
+            )
+
+            mlflow.end_run()
+
+    def log_wandb(
+        self,
+        best_model,
+        train_metric_artifact,
+        test_metric_artifact,
+        best_model_name,
+        best_model_score,
+    ):
+        """Logs metrics, parameters, and model to Weights & Biases (wandb)."""
+        try:
+            if self.config.wandb.enabled:
+                # Log metrics
+                wandb.log(
+                    {
+                        "train_f1": train_metric_artifact.f1_score,
+                        "train_precision": train_metric_artifact.precision_score,
+                        "train_recall": train_metric_artifact.recall_score,
+                        "test_f1": test_metric_artifact.f1_score,
+                        "test_precision": test_metric_artifact.precision_score,
+                        "test_recall": test_metric_artifact.recall_score,
+                        "best_model_name": best_model_name,
+                        "best_model_score": best_model_score,
+                    }
+                )
+
+                # Log model hyperparameters
+                wandb.log({"best_model_params": best_model.get_params()})
+
+                # Sanitize the model name for artifact naming
+                sanitized_model_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", best_model_name)
+
+                # Save the model as a wandb artifact
+                model_artifact = wandb.Artifact(
+                    name=f"{sanitized_model_name}_model",  # Use sanitized name
+                    type="model",
+                    description=f"Trained {best_model_name} model with score {best_model_score}",
+                )
+                model_artifact.add_file(
+                    self.model_training_config.trained_model_file_path
+                )
+                wandb.log_artifact(model_artifact)
+
+                logger.info("wandb logging completed successfully.")
+        except Exception as e:
+            logger.error(f"Error logging to wandb: {e}")
+            raise PhishingDetectionException(f"Error logging to wandb: {e}", sys)
 
     def initiate_model_training(self) -> ModelTrainerArtifact:
         """
@@ -188,8 +219,6 @@ class ModelTraining:
         """
         try:
             logger.info("Starting model training process.")
-
-            # Load transformed data
             train_file_path = (
                 self.data_transformation_artifact.transformed_train_file_path
             )
@@ -198,12 +227,9 @@ class ModelTraining:
             )
             train_arr = load_numpy_array_data(train_file_path)
             test_arr = load_numpy_array_data(test_file_path)
-
-            # Split features and labels
             X_train, y_train = train_arr[:, :-1], train_arr[:, -1]
             X_test, y_test = test_arr[:, :-1], test_arr[:, -1]
 
-            # Train the model
             model_trainer_artifact = self.train_model(X_train, y_train, X_test, y_test)
             logger.info("Model training process completed successfully.")
             return model_trainer_artifact

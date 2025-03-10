@@ -31,14 +31,14 @@ class DataValidationArtifact:
 class DataTransformationArtifact:
     """
     Artifact for data transformation stage.
-    Contains paths to the transformed data and transformation objects.
+    Contains paths to the transformed data and transformation object.
     """
 
     transformed_object_file_path: (
         str  # Path to the transformation object (e.g., preprocessing object)
     )
-    transformed_train_file_path: str  # Path to the transformed training dataset file
-    transformed_test_file_path: str  # Path to the transformed testing dataset file
+    transformed_train_file_path: str  # Path to the transformed training data
+    transformed_test_file_path: str  # Path to the transformed testing data
 
 
 @dataclass

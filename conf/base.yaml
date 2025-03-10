@@ -1,0 +1,14 @@
+defaults:
+  - _self_
+
+wandb:
+  project: "Phishing-Website-Detection"
+  entity: "piussunday-dev"
+  tags:
+    - "mlops"
+    - "phishing-detection"
+  dataset: "Phishing Website Dataset"
+  device: "mps"
+  #  architecture: ""
+  #  model: ""
+  enabled: true

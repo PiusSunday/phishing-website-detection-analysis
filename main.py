@@ -1,18 +1,37 @@
 import sys
 
+import hydra
+from omegaconf import DictConfig, OmegaConf
+
+import wandb
 from src.components.data_ingestion import DataIngestion
 from src.components.data_transformation import DataTransformation
 from src.components.data_validation import DataValidation
+from src.components.model_training import ModelTraining
 from src.entity.config_entity import (
     DataIngestionConfig,
     DataTransformationConfig,
     DataValidationConfig,
+    ModelTrainingConfig,
 )
 from src.utils.exception import PhishingDetectionException
 from src.utils.logging import logger
 
 
-def main():
+@hydra.main(config_path="conf", config_name="base", version_base=None)
+def main(cfg: DictConfig) -> None:
+
+    # Print configuration
+    print(OmegaConf.to_yaml(cfg))
+
+    # Initialize WandB if enabled
+    if cfg.wandb.enabled:
+        wandb.init(
+            project=cfg.wandb.project,
+            entity=cfg.wandb.entity,
+            tags=cfg.wandb.tags,
+            config=OmegaConf.to_container(cfg, resolve=True),
+        )
     try:
 
         # DATA INGESTION
@@ -103,9 +122,44 @@ def main():
 
         print("Data transformation process completed successfully!")
 
+        # *****************************************************************************************
+
+        # MODEL TRAINING
+
+        logger.info("Starting the model training process.")
+
+        # Initialize ModelTrainingConfig
+        model_training_config = ModelTrainingConfig()
+
+        # Initialize ModelTrainer
+        model_trainer = ModelTraining(
+            cfg, model_training_config, data_transformation_artifact
+        )
+
+        # Run the model training process
+        model_training_artifact = model_trainer.initiate_model_training()
+
+        logger.info("Model training process completed successfully.")
+        logger.info(
+            f"Trained model file path: {model_training_artifact.trained_model_file_path}"
+        )
+        logger.info(
+            f"Train metric artifact: {model_training_artifact.train_metric_artifact}"
+        )
+        logger.info(
+            f"Test metric artifact: {model_training_artifact.test_metric_artifact}"
+        )
+
+        print("Model training process completed successfully!")
+
     except Exception as e:
         logger.error(f"Error during data ingestion: {e}")
         raise PhishingDetectionException(str(e), sys)
+    finally:
+        # Finish wandb run
+        if cfg.wandb.enabled:
+            wandb.finish()
+        logger.info("wandb run completed.")
 
 
 if __name__ == "__main__":

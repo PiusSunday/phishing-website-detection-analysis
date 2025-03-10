@@ -1,8 +1,13 @@
 import sys
 
 from src.components.data_ingestion import DataIngestion
+from src.components.data_transformation import DataTransformation
 from src.components.data_validation import DataValidation
-from src.entity.config_entity import DataIngestionConfig, DataValidationConfig
+from src.entity.config_entity import (
+    DataIngestionConfig,
+    DataTransformationConfig,
+    DataValidationConfig,
+)
 from src.utils.exception import PhishingDetectionException
 from src.utils.logging import logger
 
@@ -65,6 +70,38 @@ def main():
         )
 
         print("Data validation process completed successfully!")
+
+        # *****************************************************************************************
+
+        # DATA TRANSFORMATION (PREPROCESSING OR FEATURE ENGINEERING)
+
+        logger.info("Starting the data transformation process.")
+
+        # Initialize DataTransformationConfig
+        data_transformation_config = DataTransformationConfig()
+
+        # Initialize DataTransformation
+        data_transformation = DataTransformation(
+            data_validation_artifact, data_transformation_config
+        )
+
+        # Run the data transformation process
+        data_transformation_artifact = (
+            data_transformation.initiate_data_transformation()
+        )
+
+        logger.info("Data transformation process completed successfully.")
+        logger.info(
+            f"Transformed train file path: {data_transformation_artifact.transformed_train_file_path}"
+        )
+        logger.info(
+            f"Transformed test file path: {data_transformation_artifact.transformed_test_file_path}"
+        )
+        logger.info(
+            f"Transformed object file path: {data_transformation_artifact.transformed_object_file_path}"
+        )
+
+        print("Data transformation process completed successfully!")
 
     except Exception as e:
         logger.error(f"Error during data ingestion: {e}")

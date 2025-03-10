@@ -1,6 +1,14 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Weights & Biases (wandb) configuration
+WANDB_API_KEY = os.getenv("WANDB_API_KEY")
+
 # Root directory of the project
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -23,9 +31,11 @@ TRANSFORMED_DATA_DIR = os.path.join(
     PROCESSED_DATA_DIR, "transformed"
 )  # Data from transformation stage
 
+# Objects directories for validated and transformed data
 VALIDATED_DATA_OBJECTS_DIR = os.path.join(VALIDATED_DATA_DIR, "objects")
 TRANSFORMED_DATA_OBJECTS_DIR = os.path.join(TRANSFORMED_DATA_DIR, "objects")
 
+# Data validation report file path
 DATA_VALIDATION_REPORT_FILE_PATH = os.path.join(
     ROOT_DIR, "reports", "data_validation_report.yaml"
 )
@@ -46,3 +56,38 @@ ARTIFACTS_DIR = os.path.join(ROOT_DIR, "artifacts")
 
 # Target column name
 TARGET_COLUMN = "Result"  # Name of the target column in the dataset
+
+# File names for data ingestion
+FEATURE_STORE_FILE_NAME = "feature_store.csv"
+TRAIN_FILE_NAME = "train.csv"
+TEST_FILE_NAME = "test.csv"
+
+# File names for data validation
+VALID_TRAIN_FILE_NAME = "train.csv"
+VALID_TEST_FILE_NAME = "test.csv"
+INVALID_TRAIN_FILE_NAME = "invalid_train.csv"
+INVALID_TEST_FILE_NAME = "invalid_test.csv"
+DRIFT_REPORT_FILE_NAME = "drift_report.yaml"
+
+# File names for data transformation
+TRANSFORMED_TRAIN_FILE_NAME = "train.npy"
+TRANSFORMED_TEST_FILE_NAME = "test.npy"
+TRANSFORMED_OBJECT_FILE_NAME = "preprocessor.pkl"
+
+# Model training configuration
+MODEL_TRAINER_DIR_NAME = "model_trainer"
+MODEL_TRAINER_TRAINED_MODEL_DIR = "trained_model"
+MODEL_TRAINER_TRAINED_MODEL_NAME = "model.pkl"
+MODEL_TRAINER_EXPECTED_SCORE = 0.6
+MODEL_TRAINER_OVER_FITTING_UNDER_FITTING_THRESHOLD = 0.05
+
+# Weights & Biases (WandB) configuration
+WANDB_PROJECT_NAME = "Phishing-Website-Detection"  # Name of the wandb project
+WANDB_ENTITY = "your-wandb-username"  # Your wandb username or team name
+WANDB_API_KEY = (
+    WANDB_API_KEY  # Your wandb API key (store securely in environment variables)
+)
+WANDB_LOG_MODEL = True  # Whether to log the trained model to wandb
+WANDB_LOG_ARTIFACTS = (
+    True  # Whether to log artifacts (e.g., datasets, reports) to wandb
+)

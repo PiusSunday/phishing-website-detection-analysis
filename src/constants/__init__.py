@@ -52,7 +52,8 @@ COLLECTION_NAME = "phishing_data"
 BASE_ACCURACY = 0.85  # Minimum accuracy threshold for model acceptance
 
 # Artifacts directory
-ARTIFACTS_DIR = os.path.join(ROOT_DIR, "artifacts")
+ARTIFACTS_DIR_NAME = "artifacts"
+ARTIFACTS_DIR = os.path.join(ROOT_DIR, ARTIFACTS_DIR_NAME)
 
 # Target column name
 TARGET_COLUMN = "Result"  # Name of the target column in the dataset
@@ -83,6 +84,9 @@ MODEL_TRAINER_OVER_FITTING_UNDER_FITTING_THRESHOLD = 0.05
 
 # Saved models directory
 SAVED_MODELS_DIR = os.path.join(ARTIFACTS_DIR, "saved_models")
+
+# AWS S3 BUCKET NAME
+TRAINING_BUCKET_NAME = "phishing-website-detection-analysis"
 
 # Weights & Biases (WandB) configuration
 WANDB_PROJECT_NAME = "Phishing-Website-Detection"  # Name of the wandb project

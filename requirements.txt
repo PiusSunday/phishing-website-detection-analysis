@@ -13,5 +13,6 @@ mlflow
 pyarrow
 wandb
 hydra-core
+dagshub
 
 # -e .

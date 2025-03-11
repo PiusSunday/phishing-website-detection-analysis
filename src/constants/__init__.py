@@ -81,6 +81,9 @@ MODEL_TRAINER_TRAINED_MODEL_NAME = "model.pkl"
 MODEL_TRAINER_EXPECTED_SCORE = 0.6
 MODEL_TRAINER_OVER_FITTING_UNDER_FITTING_THRESHOLD = 0.05
 
+# Saved models directory
+SAVED_MODELS_DIR = os.path.join(ARTIFACTS_DIR, "saved_models")
+
 # Weights & Biases (WandB) configuration
 WANDB_PROJECT_NAME = "Phishing-Website-Detection"  # Name of the wandb project
 WANDB_ENTITY = "your-wandb-username"  # Your wandb username or team name

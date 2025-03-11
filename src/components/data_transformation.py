@@ -146,6 +146,12 @@ class DataTransformation:
                 preprocessor_object,
             )
 
+            # Save the preprocessor object to the saved_models directory
+            save_object(
+                self.data_transformation_config.saved_preprocessor_path,
+                preprocessor_object,
+            )
+
             # Prepare and return the data transformation artifact
             data_transformation_artifact = DataTransformationArtifact(
                 transformed_object_file_path=self.data_transformation_config.transformed_object_file_path,

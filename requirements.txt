@@ -6,7 +6,7 @@ scikit-learn
 Flask
 certifi
 pymongo
-pymongo[srv]==3.12
+# pymongo[srv]==3.12
 python-dotenv
 pyaml
 mlflow
@@ -14,5 +14,7 @@ pyarrow
 wandb
 hydra-core
 dagshub
+fastapi
+uvicorn
 
 # -e .

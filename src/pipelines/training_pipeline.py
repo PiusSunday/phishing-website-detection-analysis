@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 import hydra
 import wandb
@@ -8,6 +9,7 @@ from ..components.data_ingestion import DataIngestion
 from ..components.data_transformation import DataTransformation
 from ..components.data_validation import DataValidation
 from ..components.model_training import ModelTraining
+from ..constants import PROCESSED_DATA_DIR, SAVED_MODELS_DIR, TRAINING_BUCKET_NAME
 from ..entity.artifact_entity import (
     DataIngestionArtifact,
     DataTransformationArtifact,
@@ -20,6 +22,7 @@ from ..entity.config_entity import (
     DataValidationConfig,
     ModelTrainingConfig,
 )
+from ..utils.cloud_utils import S3Sync
 from ..utils.exception import PhishingDetectionException
 from ..utils.logging import logger
 
@@ -31,6 +34,10 @@ class TrainingPipeline:
         self.data_validation_config = DataValidationConfig()
         self.data_transformation_config = DataTransformationConfig()
         self.model_training_config = ModelTrainingConfig()
+        self.s3_sync = S3Sync()
+        self.timestamp = datetime.now().strftime(
+            "%Y_%m_%d_%H_%M_%S"
+        )  # Unique timestamp for each run
 
         # Initialize WandB if enabled
         if self.cfg.wandb.enabled:
@@ -95,6 +102,33 @@ class TrainingPipeline:
         except Exception as e:
             raise PhishingDetectionException(str(e), sys)
 
+    def sync_artifacts_to_s3(self):
+        """Sync all artifacts (processed data and saved models) to S3."""
+        try:
+            logger.info("Syncing artifacts to S3.")
+
+            # Sync processed data (from data/processed)
+            processed_data_s3_path = (
+                f"s3://{TRAINING_BUCKET_NAME}/processed/{self.timestamp}"
+            )
+            self.s3_sync.sync_folder_to_s3(
+                folder=str(PROCESSED_DATA_DIR),  # Convert the path object to string
+                aws_bucket_url=processed_data_s3_path,
+            )
+            logger.info(f"Processed data synced to S3 at {processed_data_s3_path}.")
+
+            # Sync saved models (from artifacts/saved_models)
+            saved_models_s3_path = (
+                f"s3://{TRAINING_BUCKET_NAME}/saved_models/{self.timestamp}"
+            )
+            self.s3_sync.sync_folder_to_s3(
+                folder=str(SAVED_MODELS_DIR),  # Convert the path object to string
+                aws_bucket_url=saved_models_s3_path,
+            )
+            logger.info(f"Saved models synced to S3 at {saved_models_s3_path}.")
+        except Exception as e:
+            raise PhishingDetectionException(str(e), sys)
+
     def run_pipeline(self):
         try:
             logger.info("Starting training pipeline.")
@@ -108,6 +142,10 @@ class TrainingPipeline:
             model_training_artifact = self.start_model_training(
                 data_transformation_artifact
             )
+
+            # Sync artifacts to S3
+            self.sync_artifacts_to_s3()
+
             logger.info("Training pipeline completed successfully.")
             return model_training_artifact
         except Exception as e:

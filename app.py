@@ -4,6 +4,7 @@ from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
+from uvicorn import run as uvicorn_run
 
 from src.pipelines.prediction_pipeline import PredictionPipeline
 from src.pipelines.training_pipeline import TrainingPipeline
@@ -66,16 +67,10 @@ async def predict_route(request: Request, file: UploadFile = File(...)):
             "table.html", {"request": request, "predictions": predictions}
         )
 
-        # table_html = result_df.to_html(classes="table table-striped")
-        #
-        # return templates.TemplateResponse(
-        #     "table.html", {"request": request, "table": table_html}
-        # )
     except Exception as e:
         return Response(f"Error during prediction: {e}")
 
 
 if __name__ == "__main__":
-    import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn_run(app, host="0.0.0.0", port=8000)

@@ -18,6 +18,7 @@ from ..constants import (
     MODEL_TRAINER_TRAINED_MODEL_DIR,
     MODEL_TRAINER_TRAINED_MODEL_NAME,
     RAW_DATA_DIR,
+    SAVED_MODELS_DIR,
     SCHEMA_FILE_PATH,
     TARGET_COLUMN,
     TEST_FILE_NAME,
@@ -115,6 +116,9 @@ class DataTransformationConfig:
     transformed_object_file_path: str = os.path.join(
         TRANSFORMED_DATA_OBJECTS_DIR, TRANSFORMED_OBJECT_FILE_NAME
     )  # Path to the transformation object
+    saved_preprocessor_path: str = os.path.join(
+        SAVED_MODELS_DIR, TRANSFORMED_OBJECT_FILE_NAME
+    )  # Path to save preprocessor in saved_models
 
 
 @dataclass
@@ -132,6 +136,9 @@ class ModelTrainingConfig:
     trained_model_file_path: str = os.path.join(
         trained_model_dir, MODEL_TRAINER_TRAINED_MODEL_NAME
     )  # Path to the trained model file
+    saved_model_path: str = os.path.join(
+        SAVED_MODELS_DIR, MODEL_TRAINER_TRAINED_MODEL_NAME
+    )  # Path to save the trained model in saved_models
     expected_accuracy: float = (
         MODEL_TRAINER_EXPECTED_SCORE  # Minimum-expected accuracy for the model
     )

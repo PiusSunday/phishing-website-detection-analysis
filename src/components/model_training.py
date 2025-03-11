@@ -99,7 +99,12 @@ class ModelTraining:
                 os.path.dirname(self.model_training_config.trained_model_file_path),
                 exist_ok=True,
             )
+
+            # Save the trained model to the model training directory
             save_object(self.model_training_config.trained_model_file_path, best_model)
+
+            # Save the trained model to the saved_models directory
+            save_object(self.model_training_config.saved_model_path, best_model)
 
             # Pass parameters to log_mlflow
             self.log_mlflow(

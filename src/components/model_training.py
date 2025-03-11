@@ -3,6 +3,7 @@ import re
 import sys
 import warnings
 
+import dagshub
 import mlflow
 import wandb
 from mlflow.models import infer_signature
@@ -22,6 +23,12 @@ from ..utils.model_utils import (
     get_base_models,
     get_classification_score,
     get_hyperparameter_grids,
+)
+
+dagshub.init(
+    repo_owner="PiusSunday",
+    repo_name="phishing-website-detection-analysis",
+    mlflow=True,
 )
 
 # Suppress specific warnings

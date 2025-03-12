@@ -2,9 +2,15 @@ name: Deploy to Amazon ECS
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
     paths-ignore:
       - "README.md"
+      - "docs/**"
+  workflow_dispatch:  # Allow manual triggering
+
+env:
+  ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY_NAME }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
 
 jobs:
   integration:
@@ -14,92 +20,113 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest flake8
+
       - name: Lint Code
-        run: echo "Linting repository code"
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Run unit tests
-        run: echo "Running unit tests"
+        run: pytest
 
   build-and-push-ecr-image:
-    name: Continuous Delivery (Build and Push Docker Image to Amazon ECR)
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     needs: integration
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install Utilities
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq unzip
-
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, Tag, and Push Docker Image to Amazon ECR
+      - name: Build, Tag, and Push Docker Image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_NAME }}
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           # Build Docker Image and Push to Amazon ECR Repository
-          # So that Amazon ECS can use it to deploy the application to ECS Cluster
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY_NAME:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_NAME:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_NAME:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   deploy-to-ecs:
-    name: Continuous Deployment (Deploy to Amazon EC2)
-    runs-on: ip-172-31-23-226
+    name: Deploy to Amazon ECS
+    runs-on: self-hosted
     needs: build-and-push-ecr-image
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Pull Latest Docker Images from Amazon ECR
+      - name: Pull Latest Docker Image
         run: |
-          # Pull the latest Docker Image from Amazon ECR
-          # So that it can be deployed to Amazon ECS Cluster
           echo "Pulling the latest Docker Image from Amazon ECR"
-          docker pull ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest
+          docker pull ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_NAME }}:latest
 
-      # - name: Stop and Remove Existing Docker Containers if Running
-      #   run: |
-      #     # Stop and Remove the existing Docker Containers
-      #     # So that the new Docker Image can be deployed to Amazon ECS Cluster
-      #     echo "Stopping and Removing the existing Docker Containers"
-      #     docker ps -q --filter "name=${{ secrets.ECR_REPOSITORY_NAME }}" | grep -q . && docker stop ${{ secrets.ECR_REPOSITORY_NAME }} && docker rm -fv ${{ secrets.ECR_REPOSITORY_NAME }}
+      - name: Stop and Remove Existing Container
+        run: |
+          if docker ps -a --format '{{.Names}}' | grep -q "${{ env.ECR_REPOSITORY_NAME }}"; then
+            echo "Stopping and removing existing container..."
+            docker stop ${{ env.ECR_REPOSITORY_NAME }} || true
+            docker rm ${{ env.ECR_REPOSITORY_NAME }} || true
+          else
+            echo "No existing container found."
+          fi
 
       - name: Run the Docker Container
         run: |
-          # Run the Docker Container
-          # So that the application can serve the incoming requests (users)
-          echo "Running the Docker Container"
-          docker run -d -p 8080:8080 --ipc=host "--name=${{ secrets.ECR_REPOSITORY_NAME }}" -e "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" -e "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" -e "AWS_REGION=${{ secrets.AWS_REGION }}" ${{ secrets.AWS_ECR_LOGIN_URI }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest"
+          docker run -d \
+            -p 8080:8080 \
+            --name=${{ env.ECR_REPOSITORY_NAME }} \
+            -e "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e "AWS_REGION=${{ env.AWS_REGION }}" \
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY_NAME }}:latest
 
-      - name: Clean Up Previous Images and Containers
+      - name: Verify Deployment
         run: |
-          # Clean up the previous Docker Images and Containers
-          # So that the new Docker Image can be deployed to Amazon ECS Cluster
-          echo "Cleaning up the previous Docker Images and Containers"
-          docker system prune -f
+          echo "Waiting for application to start..."
+          sleep 10
+          
+          if curl -s http://localhost:8080/health || curl -s http://localhost:8080/ping; then
+            echo "Application is running!"
+          else
+            echo "Application health check failed"
+            docker logs ${{ env.ECR_REPOSITORY_NAME }}
+            exit 1
+          fi
+
+      - name: Clean Up Previous Images
+        run: |
+          echo "Cleaning up unused Docker images"
+          docker image prune -f --filter "until=24h" || true

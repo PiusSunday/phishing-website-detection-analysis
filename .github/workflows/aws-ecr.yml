@@ -98,6 +98,11 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
+      - name: Free up disk space before job
+        run: |
+          docker system prune -a -f --volumes
+          df -h  # Check available space after cleanup
+
       - name: Pull Latest Docker Image
         run: |
           echo "Pulling the latest Docker Image from Amazon ECR"
